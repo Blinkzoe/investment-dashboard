@@ -2,7 +2,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes.health import router as health_router
+from app.api.routes.positions import router as positions_router
+from app.api.routes.portfolio import router as portfolio_router
+from app.api.routes.reconciliation import router as reconciliation_router
+from app.api.routes.transactions import router as transactions_router
+from app.api.routes.snapshots import router as snapshots_router
 from app.core.config import settings
+
 
 app = FastAPI(
     title=settings.app_name,
@@ -22,3 +28,8 @@ app.add_middleware(
 
 
 app.include_router(health_router)
+app.include_router(positions_router)
+app.include_router(portfolio_router)
+app.include_router(reconciliation_router)
+app.include_router(transactions_router)
+app.include_router(snapshots_router)

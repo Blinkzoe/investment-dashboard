@@ -73,3 +73,6 @@ database/data/
 tmp/
 temp/
 .cache/
+
+# Python packaging
+*.egg-info/

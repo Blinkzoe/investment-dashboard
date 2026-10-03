@@ -59,3 +59,51 @@ def test_gbm_import_rejects_unknown_asset(db_session):
             transactions=[transaction],
             import_type="VALIDATION_TEST",
         )
+
+
+def test_gbm_import_rejects_batch_when_any_reference_is_invalid(db_session):
+    service = GBMImportService(db_session)
+
+    valid_transaction = make_transaction(
+        account_id=1,
+        asset_id=1,
+        external_id="TEST-ATOMIC-001",
+    )
+
+    invalid_transaction = make_transaction(
+        account_id=1,
+        asset_id=999999,
+        external_id="TEST-ATOMIC-002",
+    )
+
+    with pytest.raises(ValueError, match="Asset 999999 not found"):
+        service.import_transactions(
+            transactions=[valid_transaction, invalid_transaction],
+            import_type="ATOMICITY_TEST",
+        )
+
+    from sqlalchemy import select
+
+    from app.models.import_batch import ImportBatch
+    from app.models.transaction import Transaction
+
+    transactions = list(
+        db_session.scalars(
+            select(Transaction).where(
+                Transaction.external_id.in_(
+                    ["TEST-ATOMIC-001", "TEST-ATOMIC-002"]
+                )
+            )
+        ).all()
+    )
+
+    batches = list(
+        db_session.scalars(
+            select(ImportBatch).where(
+                ImportBatch.import_type == "ATOMICITY_TEST"
+            )
+        ).all()
+    )
+
+    assert transactions == []
+    assert batches == []

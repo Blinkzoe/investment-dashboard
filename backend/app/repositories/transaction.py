@@ -8,6 +8,22 @@ class TransactionRepository:
     def __init__(self, db: Session) -> None:
         self.db = db
 
+
+    def get_by_source_and_external_id(
+        self,
+        source: str,
+        external_id: str,
+    ) -> Transaction | None:
+        statement = (
+            select(Transaction)
+            .where(
+                Transaction.source == source,
+                Transaction.external_id == external_id,
+            )
+        )
+
+        return self.db.scalars(statement).first()
+
     def list_all(self) -> list[Transaction]:
         statement = select(Transaction).order_by(
             Transaction.trade_date.desc(),

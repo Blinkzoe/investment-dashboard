@@ -2,6 +2,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes.health import router as health_router
+from app.api.routes.imports import router as imports_router
+from app.api.routes.import_transactions import router as import_transactions_router
 from app.api.routes.positions import router as positions_router
 from app.api.routes.portfolio import router as portfolio_router
 from app.api.routes.reconciliation import router as reconciliation_router
@@ -28,6 +30,8 @@ app.add_middleware(
 
 
 app.include_router(health_router)
+app.include_router(imports_router)
+app.include_router(import_transactions_router)
 app.include_router(positions_router)
 app.include_router(portfolio_router)
 app.include_router(reconciliation_router)

@@ -7,10 +7,7 @@ from app.adapters.gbm.schemas import GBMTransactionInput
 
 
 class GBMJsonParser(GBMParser):
-    def parse(
-        self,
-        payload: str,
-    ) -> list[GBMTransactionInput]:
+    def parse(self, payload: str) -> list[GBMTransactionInput]:
         data = json.loads(payload)
 
         if not isinstance(data, list):

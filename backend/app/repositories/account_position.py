@@ -17,11 +17,19 @@ class AccountPositionRepository:
     def list_by_account(
         self,
         account_id: int,
+        source: str | None = None,
     ) -> list[AccountPosition]:
-        statement = (
-            select(AccountPosition)
-            .where(AccountPosition.account_id == account_id)
-            .order_by(AccountPosition.snapshot_at.desc())
+        statement = select(AccountPosition).where(
+            AccountPosition.account_id == account_id
+        )
+
+        if source is not None:
+            statement = statement.where(
+                AccountPosition.source == source
+            )
+
+        statement = statement.order_by(
+            AccountPosition.snapshot_at.desc()
         )
 
         return list(self.db.scalars(statement).all())
@@ -36,6 +44,24 @@ class AccountPositionRepository:
             .order_by(AccountPosition.account_id, AccountPosition.asset_id)
         )
 
+        return list(self.db.scalars(statement).all())
+
+    def list_by_snapshot_and_source(
+        self,
+        *,
+        account_id: int,
+        snapshot_at: datetime,
+        source: str,
+    ) -> list[AccountPosition]:
+        statement = (
+            select(AccountPosition)
+            .where(
+                AccountPosition.account_id == account_id,
+                AccountPosition.snapshot_at == snapshot_at,
+                AccountPosition.source == source,
+            )
+            .order_by(AccountPosition.asset_id)
+        )
         return list(self.db.scalars(statement).all())
 
     def create(

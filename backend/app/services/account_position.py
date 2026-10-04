@@ -17,14 +17,31 @@ class AccountPositionService:
     def list_by_account(
         self,
         account_id: int,
+        source: str | None = None,
     ) -> list[AccountPosition]:
-        return self.repository.list_by_account(account_id)
+        return self.repository.list_by_account(
+            account_id,
+            source=source,
+        )
 
     def list_by_snapshot(
         self,
         snapshot_at: datetime,
     ) -> list[AccountPosition]:
         return self.repository.list_by_snapshot(snapshot_at)
+
+    def list_by_snapshot_and_source(
+        self,
+        *,
+        account_id: int,
+        snapshot_at: datetime,
+        source: str,
+    ) -> list[AccountPosition]:
+        return self.repository.list_by_snapshot_and_source(
+            account_id=account_id,
+            snapshot_at=snapshot_at,
+            source=source,
+        )
 
     def create(
         self,

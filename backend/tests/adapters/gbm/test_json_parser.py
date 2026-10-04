@@ -1,5 +1,8 @@
 from decimal import Decimal
 
+import pytest
+from pydantic import ValidationError
+
 from app.adapters.gbm.json_parser import GBMJsonParser
 from app.adapters.gbm.parser import GBMParser
 
@@ -56,8 +59,26 @@ def test_json_parser_rejects_non_list_payload():
     }
     """
 
-    try:
+    with pytest.raises(ValueError, match="GBM JSON payload must be a list"):
         GBMJsonParser().parse(payload)
-        assert False, "Expected ValueError"
-    except ValueError as exc:
-        assert str(exc) == "GBM JSON payload must be a list"
+
+
+def test_json_parser_rejects_transaction_missing_required_field():
+    payload = """
+    [
+      {
+        "account_id": 1,
+        "asset_id": 7,
+        "transaction_type": "BUY",
+        "quantity": "10",
+        "unit_price": "29.95",
+        "gross_amount": "299.50",
+        "total_amount": "300.25",
+        "currency": "MXN",
+        "trade_date": "2026-10-02"
+      }
+    ]
+    """
+
+    with pytest.raises(ValidationError):
+        GBMJsonParser().parse(payload)

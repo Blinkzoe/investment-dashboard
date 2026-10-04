@@ -167,3 +167,47 @@ def test_import_gbm_json_endpoint_skips_duplicate(db_session):
 
     finally:
         app.dependency_overrides.clear()
+
+
+def test_import_gbm_json_endpoint_rejects_invalid_payload():
+    def override_import_token():
+        return None
+
+    app.dependency_overrides[require_import_token] = override_import_token
+
+    try:
+        client = TestClient(app)
+
+        response = client.post(
+            "/api/v1/imports/gbm/json",
+            json={
+                "payload": {
+                    "external_id": "INVALID",
+                }
+            },
+        )
+
+        assert response.status_code == 422
+        assert "Invalid GBM JSON payload" in response.json()["detail"]
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_import_gbm_json_endpoint_requires_payload():
+    def override_import_token():
+        return None
+
+    app.dependency_overrides[require_import_token] = override_import_token
+
+    try:
+        client = TestClient(app)
+
+        response = client.post(
+            "/api/v1/imports/gbm/json",
+            json={},
+        )
+
+        assert response.status_code == 422
+        assert response.json()["detail"] == "Field 'payload' is required"
+    finally:
+        app.dependency_overrides.clear()

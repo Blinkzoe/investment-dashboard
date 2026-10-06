@@ -4,7 +4,10 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.schemas.account_snapshot import AccountSnapshotRead
+from app.schemas.account_snapshot import (
+    AccountSnapshotCreate,
+    AccountSnapshotRead,
+)
 from app.services.account_snapshot import AccountSnapshotService
 
 
@@ -30,3 +33,16 @@ def list_account_snapshots(
         return service.list_by_account(account_id)
 
     return service.list_latest()
+
+
+@router.post(
+    "/accounts",
+    response_model=AccountSnapshotRead,
+    status_code=201,
+)
+def create_account_snapshot(
+    data: AccountSnapshotCreate,
+    db: DbSession,
+) -> AccountSnapshotRead:
+    service = AccountSnapshotService(db)
+    return service.create(data)

@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 
 from app.models.account_snapshot import AccountSnapshot
 from app.repositories.account_snapshot import AccountSnapshotRepository
+from app.schemas.account_snapshot import AccountSnapshotCreate
 
 
 class AccountSnapshotService:
@@ -16,3 +17,9 @@ class AccountSnapshotService:
 
     def list_latest(self) -> list[AccountSnapshot]:
         return self.repository.list_latest()
+
+    def create(
+        self,
+        data: AccountSnapshotCreate,
+    ) -> AccountSnapshot:
+        return self.repository.create(data)

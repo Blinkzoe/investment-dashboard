@@ -11,22 +11,50 @@ type PortfolioSummary = {
   source: string | null;
 };
 
+type Account = {
+  id: number;
+  institution: string;
+  name: string;
+  account_type: string;
+  base_currency: string;
+  external_id: string | null;
+};
+
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
 function App() {
   const [summary, setSummary] = useState<PortfolioSummary | null>(null);
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`${API_URL}/api/v1/portfolio-summary`)
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
+    Promise.all([
+      fetch(`${API_URL}/api/v1/portfolio-summary`),
+      fetch(`${API_URL}/api/v1/accounts`),
+    ])
+      .then(async ([summaryResponse, accountsResponse]) => {
+        if (!summaryResponse.ok) {
+          throw new Error(`Portfolio API HTTP ${summaryResponse.status}`);
         }
-        return response.json();
+
+        if (!accountsResponse.ok) {
+          throw new Error(`Accounts API HTTP ${accountsResponse.status}`);
+        }
+
+        return Promise.all([
+          summaryResponse.json() as Promise<PortfolioSummary>,
+          accountsResponse.json() as Promise<Account[]>,
+        ]);
       })
-      .then(setSummary)
+      .then(([portfolioSummary, accountList]) => {
+        setSummary(portfolioSummary);
+        setAccounts(
+          accountList.filter(
+            (account) => !account.institution.startsWith("TEST-"),
+          ),
+        );
+      })
       .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false));
   }, []);
@@ -105,6 +133,33 @@ function App() {
                   ? new Date(summary.snapshot_at).toLocaleString("es-MX")
                   : "—"}
               </strong>
+            </div>
+          </section>
+
+          <section className="accounts-section">
+            <div className="section-heading">
+              <div>
+                <p className="eyebrow">Accounts</p>
+                <h2>Cuentas</h2>
+              </div>
+              <span>{accounts.length} cuentas</span>
+            </div>
+
+            <div className="accounts-grid">
+              {accounts.map((account) => (
+                <article className="account-card" key={account.id}>
+                  <div>
+                    <span className="account-institution">
+                      {account.institution}
+                    </span>
+                    <h3>{account.name}</h3>
+                  </div>
+                  <div className="account-meta">
+                    <span>{account.account_type}</span>
+                    <strong>{account.base_currency}</strong>
+                  </div>
+                </article>
+              ))}
             </div>
           </section>
         </>

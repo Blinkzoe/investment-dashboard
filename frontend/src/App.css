@@ -100,3 +100,78 @@ h1 {
     gap: 18px;
   }
 }
+
+.accounts-section {
+  margin-top: 42px;
+}
+
+.section-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.section-heading h2 {
+  margin: 0;
+  font-size: 1.7rem;
+}
+
+.section-heading > span {
+  font-size: 0.85rem;
+  opacity: 0.6;
+}
+
+.accounts-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.account-card {
+  display: flex;
+  min-height: 150px;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 20px;
+  border: 1px solid rgba(127, 127, 127, 0.2);
+  border-radius: 16px;
+  background: rgba(127, 127, 127, 0.06);
+}
+
+.account-institution {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.55;
+}
+
+.account-card h3 {
+  margin: 8px 0 0;
+  font-size: 1.05rem;
+}
+
+.account-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+
+.account-meta strong {
+  font-size: 0.9rem;
+}
+
+@media (max-width: 900px) {
+  .accounts-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .accounts-grid {
+    grid-template-columns: 1fr;
+  }
+}

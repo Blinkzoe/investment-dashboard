@@ -7,6 +7,7 @@ from app.api.routes.import_transactions import router as import_transactions_rou
 from app.api.routes.gbm_imports import router as gbm_imports_router
 from app.api.routes.positions import router as positions_router
 from app.api.routes.portfolio import router as portfolio_router
+from app.api.routes.portfolio_summary import router as portfolio_summary_router
 from app.api.routes.reconciliation import router as reconciliation_router
 from app.api.routes.transactions import router as transactions_router
 from app.api.routes.snapshots import router as snapshots_router
@@ -39,6 +40,7 @@ app.include_router(import_transactions_router)
 app.include_router(gbm_imports_router)
 app.include_router(positions_router)
 app.include_router(portfolio_router)
+app.include_router(portfolio_summary_router)
 app.include_router(reconciliation_router)
 app.include_router(transactions_router)
 app.include_router(snapshots_router)

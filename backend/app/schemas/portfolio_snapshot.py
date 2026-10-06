@@ -10,6 +10,7 @@ class PortfolioSnapshotRead(BaseModel):
     id: int
     snapshot_at: datetime
     total_value: Decimal
+    contributed_capital: Decimal | None = None
     gain: Decimal | None = None
     return_percentage: Decimal | None = None
     currency: str

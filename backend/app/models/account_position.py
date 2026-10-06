@@ -1,7 +1,16 @@
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import DateTime, ForeignKey, Numeric, String, Text, UniqueConstraint, func
+from sqlalchemy import (
+    DateTime,
+    ForeignKey,
+    Index,
+    Numeric,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
@@ -17,6 +26,16 @@ class AccountPosition(Base):
             "snapshot_at",
             "source",
             name="uq_account_positions_snapshot",
+        ),
+        Index(
+            "ix_account_positions_account_snapshot",
+            "account_id",
+            "snapshot_at",
+        ),
+        Index(
+            "ix_account_positions_asset_snapshot",
+            "asset_id",
+            "snapshot_at",
         ),
     )
 

@@ -66,3 +66,51 @@ def test_reconcile_account_with_rounding_difference(db_session):
     assert result.positions_value == Decimal("1000.005")
     assert result.difference == Decimal("0.005")
     assert result.status == "RECONCILED_WITH_ROUNDING"
+
+def test_reconcile_account_can_filter_latest_snapshot_by_source(
+    db_session,
+):
+    db_session.add_all(
+        [
+            AccountSnapshot(
+                account_id=1,
+                snapshot_at=datetime(
+                    2026,
+                    10,
+                    3,
+                    tzinfo=timezone.utc,
+                ),
+                total_value=Decimal("1000.00"),
+                currency="MXN",
+                source="GBM",
+            ),
+            AccountSnapshot(
+                account_id=1,
+                snapshot_at=datetime(
+                    2026,
+                    10,
+                    4,
+                    tzinfo=timezone.utc,
+                ),
+                total_value=Decimal("2000.00"),
+                currency="MXN",
+                source="FINTUAL",
+            ),
+        ]
+    )
+    db_session.flush()
+
+    result = ReconciliationService(db_session).reconcile_account(
+        1,
+        source="GBM",
+    )
+
+    assert result.official_value == Decimal("1000.00")
+    assert result.currency == "MXN"
+    assert result.snapshot_at == datetime(
+        2026,
+        10,
+        3,
+        tzinfo=timezone.utc,
+    )
+

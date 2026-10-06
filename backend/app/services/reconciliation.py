@@ -18,13 +18,15 @@ class ReconciliationService:
     def reconcile_account(
         self,
         account_id: int,
+        source: str | None = None,
     ) -> AccountReconciliationRead:
-        snapshots = self.snapshot_repository.list_by_account(account_id)
+        snapshot = self.snapshot_repository.get_latest_by_account(
+            account_id=account_id,
+            source=source,
+        )
 
-        if not snapshots:
+        if snapshot is None:
             raise ValueError("No account snapshot found")
-
-        snapshot = snapshots[0]
 
         positions = self.position_repository.list_by_account(account_id)
 

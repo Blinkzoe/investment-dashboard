@@ -88,3 +88,56 @@ def test_repository_list_latest_returns_latest_snapshot_per_account(
     assert len(snapshots) == 1
     assert snapshots[0].id == latest.id
     assert snapshots[0].total_value == Decimal("110000.00000000")
+
+def test_repository_get_latest_by_account_filters_source(
+    db_session,
+) -> None:
+    account = db_session.scalars(select(Account)).first()
+    assert account is not None
+
+    repository = AccountSnapshotRepository(db_session)
+
+    gbm_snapshot = repository.create(
+        AccountSnapshotCreate(
+            account_id=account.id,
+            snapshot_at=datetime(
+                2026,
+                10,
+                3,
+                21,
+                0,
+                tzinfo=timezone.utc,
+            ),
+            total_value=Decimal("110000"),
+            currency="MXN",
+            source="GBM",
+        )
+    )
+
+    repository.create(
+        AccountSnapshotCreate(
+            account_id=account.id,
+            snapshot_at=datetime(
+                2026,
+                10,
+                4,
+                21,
+                0,
+                tzinfo=timezone.utc,
+            ),
+            total_value=Decimal("120000"),
+            currency="MXN",
+            source="FINTUAL",
+        )
+    )
+
+    latest = repository.get_latest_by_account(
+        account_id=account.id,
+        source="GBM",
+    )
+
+    assert latest is not None
+    assert latest.id == gbm_snapshot.id
+    assert latest.total_value == Decimal("110000.00000000")
+    assert latest.source == "GBM"
+

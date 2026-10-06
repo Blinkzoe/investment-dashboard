@@ -7,7 +7,6 @@ from app.core.database import get_db
 from app.schemas.reconciliation import AccountReconciliationRead
 from app.services.reconciliation import ReconciliationService
 
-
 router = APIRouter(
     prefix="/api/v1/reconciliation",
     tags=["reconciliation"],
@@ -23,11 +22,14 @@ DbSession = Annotated[Session, Depends(get_db)]
 def reconcile_account(
     account_id: int,
     db: DbSession,
+    source: str | None = None,
 ) -> AccountReconciliationRead:
     service = ReconciliationService(db)
-
     try:
-        return service.reconcile_account(account_id)
+        return service.reconcile_account(
+            account_id=account_id,
+            source=source,
+        )
     except ValueError as exc:
         raise HTTPException(
             status_code=404,

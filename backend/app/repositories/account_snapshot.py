@@ -21,6 +21,26 @@ class AccountSnapshotRepository:
         )
         return list(self.db.scalars(statement).all())
 
+    def get_latest_by_account(
+        self,
+        account_id: int,
+        source: str | None = None,
+    ) -> AccountSnapshot | None:
+        statement = select(AccountSnapshot).where(
+            AccountSnapshot.account_id == account_id
+        )
+
+        if source is not None:
+            statement = statement.where(
+                AccountSnapshot.source == source
+            )
+
+        statement = statement.order_by(
+            AccountSnapshot.snapshot_at.desc()
+        ).limit(1)
+
+        return self.db.scalars(statement).first()
+
     def list_latest(self) -> list[AccountSnapshot]:
         latest_snapshot = (
             select(

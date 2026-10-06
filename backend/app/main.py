@@ -12,6 +12,7 @@ from app.api.routes.transactions import router as transactions_router
 from app.api.routes.snapshots import router as snapshots_router
 from app.api.routes.prices import router as prices_router
 from app.api.routes.accounts import router as accounts_router
+from app.api.routes.account_summary import router as account_summary_router
 from app.core.config import settings
 
 
@@ -43,3 +44,4 @@ app.include_router(transactions_router)
 app.include_router(snapshots_router)
 app.include_router(prices_router)
 app.include_router(accounts_router)
+app.include_router(account_summary_router)

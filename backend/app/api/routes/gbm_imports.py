@@ -50,9 +50,15 @@ def import_gbm_json(
 
     service = GBMImportService(db)
 
-    return service.import_transactions(
-        transactions=transactions,
-        import_type=str(data.get("import_type", "JSON")),
-        filename=data.get("filename"),
-        notes=data.get("notes"),
-    )
+    try:
+        return service.import_transactions(
+            transactions=transactions,
+            import_type=str(data.get("import_type", "JSON")),
+            filename=data.get("filename"),
+            notes=data.get("notes"),
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid GBM import: {exc}",
+        ) from exc

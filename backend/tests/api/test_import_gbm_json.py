@@ -211,3 +211,86 @@ def test_import_gbm_json_endpoint_requires_payload():
         assert response.json()["detail"] == "Field 'payload' is required"
     finally:
         app.dependency_overrides.clear()
+
+
+def test_import_gbm_json_endpoint_is_atomic_for_invalid_transaction(db_session):
+    account = db_session.scalars(
+        select(Account).where(Account.institution == "TEST")
+    ).one()
+    asset = db_session.scalars(
+        select(Asset).where(Asset.symbol == "TEST-ASSET")
+    ).one()
+
+    def override_get_db():
+        yield db_session
+
+    def override_import_token():
+        return None
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[require_import_token] = override_import_token
+
+    try:
+        client = TestClient(app)
+
+        payload = {
+            "import_type": "JSON_ATOMICITY_TEST",
+            "payload": [
+                {
+                    "external_id": "TEST-ENDPOINT-ATOMIC-001",
+                    "account_id": account.id,
+                    "asset_id": asset.id,
+                    "transaction_type": "BUY",
+                    "status": "FILLED",
+                    "quantity": "5",
+                    "unit_price": "100.00",
+                    "gross_amount": "500.00",
+                    "commission": "1.25",
+                    "taxes": "0",
+                    "other_fees": "0",
+                    "total_amount": "501.25",
+                    "currency": "MXN",
+                    "trade_date": "2026-10-03",
+                },
+                {
+                    "external_id": "TEST-ENDPOINT-ATOMIC-002",
+                    "account_id": account.id,
+                    "asset_id": 999999,
+                    "transaction_type": "BUY",
+                    "status": "FILLED",
+                    "quantity": "5",
+                    "unit_price": "100.00",
+                    "gross_amount": "500.00",
+                    "commission": "1.25",
+                    "taxes": "0",
+                    "other_fees": "0",
+                    "total_amount": "501.25",
+                    "currency": "MXN",
+                    "trade_date": "2026-10-03",
+                },
+            ],
+        }
+
+        response = client.post(
+            "/api/v1/imports/gbm/json",
+            json=payload,
+        )
+
+        assert response.status_code == 422
+        assert "Asset 999999 not found" in response.json()["detail"]
+
+        transactions = db_session.scalars(
+            select(Transaction).where(
+                Transaction.external_id.in_(
+                    [
+                        "TEST-ENDPOINT-ATOMIC-001",
+                        "TEST-ENDPOINT-ATOMIC-002",
+                    ]
+                )
+            )
+        ).all()
+
+        assert transactions == []
+
+    finally:
+        app.dependency_overrides.clear()

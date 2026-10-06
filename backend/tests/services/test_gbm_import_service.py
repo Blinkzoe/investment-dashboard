@@ -172,3 +172,67 @@ def test_gbm_import_service_skips_duplicate_external_ids_within_same_payload(
     ).all()
 
     assert len(stored_transactions) == 1
+
+
+def test_gbm_import_service_rolls_back_on_commit_error(db_session):
+    account = db_session.scalars(
+        select(Account).where(Account.institution == "TEST")
+    ).one()
+
+    asset = db_session.scalars(
+        select(Asset).where(Asset.symbol == "TEST-ASSET")
+    ).one()
+
+    service = GBMImportService(db_session)
+
+    duplicate_external_id = "TEST-COMMIT-ROLLBACK-001"
+
+    existing = Transaction(
+        source="GBM",
+        external_id=duplicate_external_id,
+        account_id=account.id,
+        asset_id=asset.id,
+        transaction_type="BUY",
+        status="FILLED",
+        quantity=Decimal("10"),
+        unit_price=Decimal("29.95"),
+        gross_amount=Decimal("299.50"),
+        commission=Decimal("0.75"),
+        taxes=Decimal("0"),
+        other_fees=Decimal("0"),
+        total_amount=Decimal("300.25"),
+        currency="MXN",
+        trade_date=date(2026, 10, 2),
+    )
+
+    db_session.add(existing)
+    db_session.flush()
+
+    with pytest.raises(Exception):
+        service.import_transactions(
+            transactions=[
+                make_transaction(
+                    account.id,
+                    asset.id,
+                    duplicate_external_id,
+                )
+            ],
+            import_type="TEST_COMMIT_ROLLBACK",
+            filename="test_gbm.json",
+        )
+
+    stored_transactions = db_session.scalars(
+        select(Transaction).where(
+            Transaction.external_id == duplicate_external_id
+        )
+    ).all()
+
+    assert len(stored_transactions) == 1
+
+    batches = db_session.scalars(
+        select(ImportBatch).where(
+            ImportBatch.import_type == "TEST_COMMIT_ROLLBACK"
+        )
+    ).all()
+
+    assert batches == []

@@ -82,3 +82,14 @@ def test_json_parser_rejects_transaction_missing_required_field():
 
     with pytest.raises(ValidationError):
         GBMJsonParser().parse(payload)
+
+
+def test_json_parser_rejects_non_object_transaction():
+    payload = """
+    [
+      null
+    ]
+    """
+
+    with pytest.raises(ValidationError):
+        GBMJsonParser().parse(payload)

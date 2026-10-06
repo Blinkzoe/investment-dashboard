@@ -12,6 +12,6 @@ class GBMJsonParser(GBMParser):
             raise ValueError("GBM JSON payload must be a list")
 
         return [
-            GBMTransactionInput(**item)
+            GBMTransactionInput.model_validate(item)
             for item in data
         ]

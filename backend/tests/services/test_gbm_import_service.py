@@ -1,6 +1,8 @@
 from datetime import date
 from decimal import Decimal
 
+import pytest
+
 from sqlalchemy import select
 
 from app.adapters.gbm.schemas import GBMTransactionInput
@@ -174,7 +176,7 @@ def test_gbm_import_service_skips_duplicate_external_ids_within_same_payload(
     assert len(stored_transactions) == 1
 
 
-def test_gbm_import_service_rolls_back_on_commit_error(db_session):
+def test_gbm_import_service_skips_duplicate_external_id(db_session):
     account = db_session.scalars(
         select(Account).where(Account.institution == "TEST")
     ).one()
@@ -185,7 +187,7 @@ def test_gbm_import_service_rolls_back_on_commit_error(db_session):
 
     service = GBMImportService(db_session)
 
-    duplicate_external_id = "TEST-COMMIT-ROLLBACK-001"
+    duplicate_external_id = "TEST-DUPLICATE-SKIP-001"
 
     existing = Transaction(
         source="GBM",
@@ -208,18 +210,21 @@ def test_gbm_import_service_rolls_back_on_commit_error(db_session):
     db_session.add(existing)
     db_session.flush()
 
-    with pytest.raises(Exception):
-        service.import_transactions(
-            transactions=[
-                make_transaction(
-                    account.id,
-                    asset.id,
-                    duplicate_external_id,
-                )
-            ],
-            import_type="TEST_COMMIT_ROLLBACK",
-            filename="test_gbm.json",
-        )
+    result = service.import_transactions(
+        transactions=[
+            make_transaction(
+                account.id,
+                asset.id,
+                duplicate_external_id,
+            )
+        ],
+        import_type="TEST_DUPLICATE_SKIP",
+        filename="test_gbm.json",
+    )
+
+    assert result.received == 1
+    assert result.imported == 0
+    assert result.skipped_duplicates == 1
 
     stored_transactions = db_session.scalars(
         select(Transaction).where(
@@ -231,8 +236,9 @@ def test_gbm_import_service_rolls_back_on_commit_error(db_session):
 
     batches = db_session.scalars(
         select(ImportBatch).where(
-            ImportBatch.import_type == "TEST_COMMIT_ROLLBACK"
+            ImportBatch.import_type == "TEST_DUPLICATE_SKIP"
         )
     ).all()
 
-    assert batches == []
+    assert len(batches) == 1
+    assert batches[0].status == "COMPLETED"

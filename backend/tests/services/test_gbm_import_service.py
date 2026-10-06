@@ -127,3 +127,48 @@ def test_gbm_import_service_skips_duplicate_transactions(db_session):
     ).all()
 
     assert len(stored_transactions) == 2
+
+
+def test_gbm_import_service_skips_duplicate_external_ids_within_same_payload(
+    db_session,
+):
+    account = db_session.scalars(
+        select(Account).where(Account.institution == "TEST")
+    ).one()
+
+    asset = db_session.scalars(
+        select(Asset).where(Asset.symbol == "TEST-ASSET")
+    ).one()
+
+    service = GBMImportService(db_session)
+
+    transactions = [
+        make_transaction(
+            account.id,
+            asset.id,
+            "TEST-INTERNAL-DUP-001",
+        ),
+        make_transaction(
+            account.id,
+            asset.id,
+            "TEST-INTERNAL-DUP-001",
+        ),
+    ]
+
+    result = service.import_transactions(
+        transactions=transactions,
+        import_type="TEST_INTERNAL_DUPLICATE",
+        filename="test_gbm.json",
+    )
+
+    assert result.received == 2
+    assert result.imported == 1
+    assert result.skipped_duplicates == 1
+
+    stored_transactions = db_session.scalars(
+        select(Transaction).where(
+            Transaction.external_id == "TEST-INTERNAL-DUP-001"
+        )
+    ).all()
+
+    assert len(stored_transactions) == 1

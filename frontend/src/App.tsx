@@ -20,11 +20,26 @@ type Account = {
   external_id: string | null;
 };
 
+type AccountSnapshot = {
+  id: number;
+  account_id: number;
+  snapshot_at: string;
+  total_value: string;
+  cash_value: string | null;
+  currency: string;
+  source: string;
+  notes: string | null;
+  created_at: string;
+};
+
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
 function App() {
   const [summary, setSummary] = useState<PortfolioSummary | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [accountSnapshots, setAccountSnapshots] = useState<
+    AccountSnapshot[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,8 +47,9 @@ function App() {
     Promise.all([
       fetch(`${API_URL}/api/v1/portfolio-summary`),
       fetch(`${API_URL}/api/v1/accounts`),
+      fetch(`${API_URL}/api/v1/snapshots/accounts`),
     ])
-      .then(async ([summaryResponse, accountsResponse]) => {
+      .then(async ([summaryResponse, accountsResponse, snapshotsResponse]) => {
         if (!summaryResponse.ok) {
           throw new Error(`Portfolio API HTTP ${summaryResponse.status}`);
         }
@@ -42,18 +58,26 @@ function App() {
           throw new Error(`Accounts API HTTP ${accountsResponse.status}`);
         }
 
+        if (!snapshotsResponse.ok) {
+          throw new Error(
+            `Account snapshots API HTTP ${snapshotsResponse.status}`,
+          );
+        }
+
         return Promise.all([
           summaryResponse.json() as Promise<PortfolioSummary>,
           accountsResponse.json() as Promise<Account[]>,
+          snapshotsResponse.json() as Promise<AccountSnapshot[]>,
         ]);
       })
-      .then(([portfolioSummary, accountList]) => {
+      .then(([portfolioSummary, accountList, snapshotList]) => {
         setSummary(portfolioSummary);
         setAccounts(
           accountList.filter(
             (account) => !account.institution.startsWith("TEST-"),
           ),
         );
+        setAccountSnapshots(snapshotList);
       })
       .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false));
@@ -146,20 +170,33 @@ function App() {
             </div>
 
             <div className="accounts-grid">
-              {accounts.map((account) => (
-                <article className="account-card" key={account.id}>
-                  <div>
-                    <span className="account-institution">
-                      {account.institution}
-                    </span>
-                    <h3>{account.name}</h3>
-                  </div>
-                  <div className="account-meta">
-                    <span>{account.account_type}</span>
-                    <strong>{account.base_currency}</strong>
-                  </div>
-                </article>
-              ))}
+              {accounts.map((account) => {
+                const snapshot = accountSnapshots.find(
+                  (item) => item.account_id === account.id,
+                );
+
+                return (
+                  <article className="account-card" key={account.id}>
+                    <div>
+                      <span className="account-institution">
+                        {account.institution}
+                      </span>
+                      <h3>{account.name}</h3>
+                    </div>
+
+                    <div className="account-value">
+                      {snapshot
+                        ? money(snapshot.total_value, snapshot.currency)
+                        : "Sin snapshot"}
+                    </div>
+
+                    <div className="account-meta">
+                      <span>{account.account_type}</span>
+                      <strong>{account.base_currency}</strong>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
           </section>
         </>

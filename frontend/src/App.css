@@ -175,3 +175,9 @@ h1 {
     grid-template-columns: 1fr;
   }
 }
+
+.account-value {
+  margin: 18px 0;
+  font-size: 1.45rem;
+  font-weight: 700;
+}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import "./App.css";
 
 type PortfolioSummary = {
@@ -212,52 +212,41 @@ function App() {
     setMonthlySummary([]);
   }
 
-  const accountMap = useMemo(
-    () => new Map(accounts.map((account) => [account.id, account])),
-    [accounts],
+  const accountMap = new Map(
+    accounts.map((account) => [account.id, account]),
   );
 
-  const filteredTransactions = useMemo(
-    () =>
-      transactions.filter((transaction) => {
-        const accountOk =
-          accountFilter === "all" || String(transaction.account_id) === accountFilter;
-        const typeOk =
-          typeFilter === "all" || transaction.transaction_type === typeFilter;
-        return accountOk && typeOk;
-      }),
-    [transactions, accountFilter, typeFilter],
-  );
+  const filteredTransactions = transactions.filter((transaction) => {
+    const accountOk =
+      accountFilter === "all" ||
+      String(transaction.account_id) === accountFilter;
+    const typeOk =
+      typeFilter === "all" ||
+      transaction.transaction_type === typeFilter;
 
-  const latestSnapshots = useMemo(() => {
-    const latest = new Map<number, AccountSnapshot>();
+    return accountOk && typeOk;
+  });
 
-    for (const snapshot of accountSnapshots) {
-      const previous = latest.get(snapshot.account_id);
-      if (!previous || snapshot.snapshot_at > previous.snapshot_at) {
-        latest.set(snapshot.account_id, snapshot);
-      }
+  const latest = new Map<number, AccountSnapshot>();
+
+  for (const snapshot of accountSnapshots) {
+    const previous = latest.get(snapshot.account_id);
+
+    if (!previous || snapshot.snapshot_at > previous.snapshot_at) {
+      latest.set(snapshot.account_id, snapshot);
     }
+  }
 
-    return Array.from(latest.values()).sort(
-      (a, b) => Number(b.total_value) - Number(a.total_value),
-    );
-  }, [accountSnapshots]);
-
-  const fixedIncomeSnapshots = useMemo(
-    () =>
-      latestSnapshots.filter(
-        (snapshot) => snapshot.source === "FIXED_INCOME_HISTORY",
-      ),
-    [latestSnapshots],
+  const latestSnapshots = Array.from(latest.values()).sort(
+    (a, b) => Number(b.total_value) - Number(a.total_value),
   );
 
-  const variableSnapshots = useMemo(
-    () =>
-      latestSnapshots.filter(
-        (snapshot) => snapshot.source !== "FIXED_INCOME_HISTORY",
-      ),
-    [latestSnapshots],
+  const fixedIncomeSnapshots = latestSnapshots.filter(
+    (snapshot) => snapshot.source === "FIXED_INCOME_HISTORY",
+  );
+
+  const variableSnapshots = latestSnapshots.filter(
+    (snapshot) => snapshot.source !== "FIXED_INCOME_HISTORY",
   );
 
   const totalAccounts = latestSnapshots.reduce(
@@ -326,6 +315,64 @@ function App() {
     );
   }
 
+  const annualRate = 0.10;
+  const monthlyRate = Math.pow(1 + annualRate, 1 / 12) - 1;
+
+  const fixedIncomeBenchmark = monthlySummary.map((month) => ({
+    month: month.month,
+    actualInterest: Number(month.interest_value),
+    benchmarkMonthlyInterest:
+      Number(month.total_value) * monthlyRate,
+    benchmarkValue:
+      Number(month.total_value) +
+      Number(month.total_value) * monthlyRate,
+  }));
+
+  const fixedIncomeBenchmarkTotal =
+    fixedIncomeBenchmark.reduce(
+      (sum, month) => sum + month.benchmarkMonthlyInterest,
+      0,
+    );
+
+  const snapshotDate = summary?.snapshot_at
+    ? new Date(summary.snapshot_at)
+    : new Date();
+
+  const variableBenchmark = transactions.reduce((total, transaction) => {
+    if (!transaction.trade_date) return total;
+
+    const amount = Number(transaction.total_amount ?? 0);
+
+    if (
+      amount <= 0 ||
+      transaction.transaction_type !== "BUY"
+    ) {
+      return total;
+    }
+
+    const start = new Date(transaction.trade_date);
+
+    const years =
+      Math.max(
+        0,
+        snapshotDate.getTime() - start.getTime(),
+      ) /
+      (365.25 * 24 * 60 * 60 * 1000);
+
+    return (
+      total +
+      amount * (Math.pow(1 + annualRate, years) - 1)
+    );
+  }, 0);
+
+const variableActualGain = Number(summary?.gain ?? 0);
+
+  const variableVsBenchmark =
+    variableActualGain - variableBenchmark;
+
+const fixedIncomeVsBenchmark =
+  fixedIncomeInterestTotal - fixedIncomeBenchmarkTotal;
+
   return (
     <main className="dashboard">
       <header className="topbar">
@@ -333,7 +380,7 @@ function App() {
           <p className="eyebrow">INVESTMENTS / OVERVIEW</p>
           <h1>Mi portafolio</h1>
           <p className="subtitle">
-            Una vista consolidada de tus inversiones y movimientos.
+            Patrimonio, rendimiento e intereses en una sola vista.
           </p>
         </div>
 
@@ -386,11 +433,17 @@ function App() {
 
       {!loading && !error && summary && (
         <>
+          {/* ==================================================
+              TODO
+          ================================================== */}
+
           {activeTab === "all" && (
             <>
               <section className="hero-grid">
                 <article className="hero-card">
-                  <span className="metric-label">Patrimonio total</span>
+                  <span className="metric-label">
+                    Patrimonio total
+                  </span>
                   <strong className="hero-value">
                     {money(String(totalAccounts), "MXN")}
                   </strong>
@@ -400,7 +453,9 @@ function App() {
                 </article>
 
                 <article className="metric-card">
-                  <span className="metric-label">Renta fija</span>
+                  <span className="metric-label">
+                    Renta fija
+                  </span>
                   <strong className="positive">
                     {money(String(fixedIncomeTotal), "MXN")}
                   </strong>
@@ -410,7 +465,9 @@ function App() {
                 </article>
 
                 <article className="metric-card">
-                  <span className="metric-label">Renta variable</span>
+                  <span className="metric-label">
+                    Renta variable
+                  </span>
                   <strong>
                     {money(String(variableTotal), "MXN")}
                   </strong>
@@ -424,12 +481,56 @@ function App() {
                     Intereses acumulados
                   </span>
                   <strong className="positive">
-                    {money(String(fixedIncomeInterestTotal), "MXN")}
+                    {money(
+                      String(fixedIncomeInterestTotal),
+                      "MXN",
+                    )}
                   </strong>
                   <span className="metric-foot">
-                    Renta fija histórica
+                    Desde octubre 2022
                   </span>
                 </article>
+              </section>
+
+              <section className="dashboard-insight">
+                <div>
+                  <p className="eyebrow">PORTFOLIO MIX</p>
+                  <h2>¿Dónde está tu dinero?</h2>
+                  <p>
+                    La mayor parte del patrimonio está actualmente
+                    en renta fija. La pestaña correspondiente permite
+                    comparar sus intereses contra un benchmark del
+                    10% anual.
+                  </p>
+                </div>
+
+                <div className="insight-numbers">
+                  <div>
+                    <span>Renta fija</span>
+                    <strong>
+                      {totalAccounts > 0
+                        ? `${(
+                            (fixedIncomeTotal /
+                              totalAccounts) *
+                            100
+                          ).toFixed(1)}%`
+                        : "—"}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span>Renta variable</span>
+                    <strong>
+                      {totalAccounts > 0
+                        ? `${(
+                            (variableTotal /
+                              totalAccounts) *
+                            100
+                          ).toFixed(1)}%`
+                        : "—"}
+                    </strong>
+                  </div>
+                </div>
               </section>
 
               <section className="main-grid">
@@ -446,10 +547,15 @@ function App() {
 
                   <div className="allocation-list">
                     {latestSnapshots.map((snapshot) => {
-                      const account = accountMap.get(snapshot.account_id);
+                      const account = accountMap.get(
+                        snapshot.account_id,
+                      );
+
                       const percentage =
                         totalAccounts > 0
-                          ? (Number(snapshot.total_value) / totalAccounts) * 100
+                          ? (Number(snapshot.total_value) /
+                              totalAccounts) *
+                            100
                           : 0;
 
                       return (
@@ -484,7 +590,10 @@ function App() {
                           <div className="allocation-bar">
                             <span
                               style={{
-                                width: `${Math.min(percentage, 100)}%`,
+                                width: `${Math.min(
+                                  percentage,
+                                  100,
+                                )}%`,
                               }}
                             />
                           </div>
@@ -497,16 +606,19 @@ function App() {
                 <article className="panel">
                   <div className="panel-header">
                     <div>
-                      <p className="eyebrow">SUMMARY</p>
-                      <h2>Resumen de inversión</h2>
+                      <p className="eyebrow">VARIABLE</p>
+                      <h2>Rendimiento actual</h2>
                     </div>
                   </div>
 
                   <div className="summary-list">
                     <div>
-                      <span>Valor de renta variable</span>
+                      <span>Valor</span>
                       <strong>
-                        {money(summary.total_value, summary.currency)}
+                        {money(
+                          summary.total_value,
+                          summary.currency,
+                        )}
                       </strong>
                     </div>
 
@@ -523,7 +635,10 @@ function App() {
                     <div>
                       <span>Ganancia</span>
                       <strong className="positive">
-                        {money(summary.gain, summary.currency)}
+                        {money(
+                          summary.gain,
+                          summary.currency,
+                        )}
                       </strong>
                     </div>
 
@@ -535,32 +650,28 @@ function App() {
                           : `${summary.return_percentage}%`}
                       </strong>
                     </div>
-
-                    <div>
-                      <span>Última actualización</span>
-                      <strong>
-                        {summary.snapshot_at
-                          ? new Date(
-                              summary.snapshot_at,
-                            ).toLocaleDateString("es-MX")
-                          : "—"}
-                      </strong>
-                    </div>
                   </div>
                 </article>
               </section>
             </>
           )}
 
+          {/* ==================================================
+              RENTA FIJA
+          ================================================== */}
+
           {activeTab === "fixed" && (
             <>
               <section className="hero-grid">
                 <article className="hero-card">
                   <span className="metric-label">
-                    Patrimonio de renta fija
+                    Patrimonio renta fija
                   </span>
                   <strong className="hero-value">
-                    {money(String(fixedIncomeTotal), "MXN")}
+                    {money(
+                      String(fixedIncomeTotal),
+                      "MXN",
+                    )}
                   </strong>
                   <span className="metric-foot">
                     Septiembre 2026
@@ -578,13 +689,13 @@ function App() {
                     )}
                   </strong>
                   <span className="metric-foot">
-                    Octubre 2022 — septiembre 2026
+                    48 meses registrados
                   </span>
                 </article>
 
                 <article className="metric-card">
                   <span className="metric-label">
-                    Intereses último mes
+                    Interés último mes
                   </span>
                   <strong className="positive">
                     {money(
@@ -598,13 +709,185 @@ function App() {
                 </article>
 
                 <article className="metric-card">
-                  <span className="metric-label">Cuentas</span>
+                  <span className="metric-label">
+                    Benchmark 10% anual
+                  </span>
                   <strong>
-                    {fixedIncomeSnapshots.length}
+                    {money(
+                      String(fixedIncomeBenchmarkTotal),
+                      "MXN",
+                    )}
                   </strong>
                   <span className="metric-foot">
-                    Bancos, SOFIPOs, fintechs y CETES
+                    Referencia hipotética
                   </span>
+                </article>
+              </section>
+
+              <section className="comparison-card">
+                <div>
+                  <p className="eyebrow">BENCHMARK</p>
+                  <h2>Renta fija vs 10% anual</h2>
+                  <p>
+                    Comparación orientativa. El benchmark calcula
+                    10% anual equivalente a una tasa mensual compuesta
+                    aplicada al saldo de cada mes. No representa un
+                    rendimiento realmente disponible.
+                  </p>
+                </div>
+
+                <div className="comparison-grid">
+                  <div>
+                    <span>Intereses registrados</span>
+                    <strong className="positive">
+                      {money(
+                        String(fixedIncomeInterestTotal),
+                        "MXN",
+                      )}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span>Benchmark</span>
+                    <strong>
+                      {money(
+                        String(fixedIncomeBenchmarkTotal),
+                        "MXN",
+                      )}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span>Diferencia</span>
+                    <strong
+                      className={
+                        fixedIncomeVsBenchmark >= 0
+                          ? "positive"
+                          : "negative"
+                      }
+                    >
+                      {money(
+                        String(fixedIncomeVsBenchmark),
+                        "MXN",
+                      )}
+                    </strong>
+                  </div>
+                </div>
+              </section>
+
+              <section className="chart-grid">
+                <article className="chart-card">
+                  <div className="chart-heading">
+                    <div>
+                      <p className="eyebrow">PATRIMONIO</p>
+                      <h2>Evolución mensual</h2>
+                    </div>
+                    <span>48 meses</span>
+                  </div>
+
+                  <div className="mini-chart">
+                    {monthlySummary.map((month) => {
+                      const max = Math.max(
+                        ...monthlySummary.map((item) =>
+                          Number(item.total_value),
+                        ),
+                        1,
+                      );
+
+                      const height =
+                        (Number(month.total_value) / max) *
+                        100;
+
+                      const [year, monthNumber] =
+                        month.month.slice(0, 7).split("-");
+
+                      const label = new Date(
+                        Number(year),
+                        Number(monthNumber) - 1,
+                        1,
+                      ).toLocaleDateString("es-MX", {
+                        month: "short",
+                        year: "2-digit",
+                      });
+
+                      return (
+                        <div
+                          className="chart-column"
+                          key={month.month}
+                          title={`${label}: ${money(
+                            month.total_value,
+                            "MXN",
+                          )}`}
+                        >
+                          <span
+                            style={{
+                              height: `${Math.max(
+                                height,
+                                2,
+                              )}%`,
+                            }}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </article>
+
+                <article className="chart-card">
+                  <div className="chart-heading">
+                    <div>
+                      <p className="eyebrow">INTERESES</p>
+                      <h2>Interés generado por mes</h2>
+                    </div>
+                    <span>MXN</span>
+                  </div>
+
+                  <div className="interest-chart">
+                    {monthlySummary.map((month) => {
+                      const max = Math.max(
+                        ...monthlySummary.map((item) =>
+                          Number(item.interest_value),
+                        ),
+                        1,
+                      );
+
+                      const height =
+                        (Number(month.interest_value) / max) *
+                        100;
+
+                      const [year, monthNumber] =
+                        month.month.slice(0, 7).split("-");
+
+                      const label = new Date(
+                        Number(year),
+                        Number(monthNumber) - 1,
+                        1,
+                      ).toLocaleDateString("es-MX", {
+                        month: "short",
+                        year: "2-digit",
+                      });
+
+                      return (
+                        <div
+                          className="chart-column"
+                          key={month.month}
+                          title={`${label}: ${money(
+                            month.interest_value,
+                            "MXN",
+                          )}`}
+                        >
+                          <span
+                            style={{
+                              height: `${Math.max(
+                                height,
+                                2,
+                              )}%`,
+                            }}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
                 </article>
               </section>
 
@@ -613,9 +896,8 @@ function App() {
                   <div className="panel-header">
                     <div>
                       <p className="eyebrow">FIXED INCOME</p>
-                      <h2>Distribución</h2>
+                      <h2>Distribución actual</h2>
                     </div>
-
                     <span className="panel-note">
                       {money(
                         String(fixedIncomeTotal),
@@ -685,63 +967,176 @@ function App() {
                 <article className="panel">
                   <div className="panel-header">
                     <div>
-                      <p className="eyebrow">INTEREST</p>
-                      <h2>Rendimientos</h2>
+                      <p className="eyebrow">DETAIL</p>
+                      <h2>Último mes</h2>
                     </div>
                   </div>
 
                   <div className="summary-list">
-                    <div>
-                      <span>Patrimonio actual</span>
-                      <strong>
-                        {money(
-                          String(fixedIncomeTotal),
-                          "MXN",
-                        )}
-                      </strong>
-                    </div>
+                    {monthlySummary.length > 0 &&
+                      (() => {
+                        const latest =
+                          monthlySummary[
+                            monthlySummary.length - 1
+                          ];
 
-                    <div>
-                      <span>Intereses históricos</span>
-                      <strong className="positive">
-                        {money(
-                          String(fixedIncomeInterestTotal),
-                          "MXN",
-                        )}
-                      </strong>
-                    </div>
+                        return (
+                          <>
+                            <div>
+                              <span>Patrimonio</span>
+                              <strong>
+                                {money(
+                                  latest.total_value,
+                                  "MXN",
+                                )}
+                              </strong>
+                            </div>
 
-                    <div>
-                      <span>Último mes</span>
-                      <strong className="positive">
-                        {money(
-                          String(latestMonthlyInterest),
-                          "MXN",
-                        )}
-                      </strong>
-                    </div>
+                            <div>
+                              <span>Intereses</span>
+                              <strong className="positive">
+                                {money(
+                                  latest.interest_value,
+                                  "MXN",
+                                )}
+                              </strong>
+                            </div>
 
-                    <div>
-                      <span>Meses registrados</span>
-                      <strong>
-                        {monthlySummary.length}
-                      </strong>
-                    </div>
+                            <div>
+                              <span>Movimientos</span>
+                              <strong>
+                                {money(
+                                  String(
+                                    Number(
+                                      latest.contribution_value,
+                                    ) -
+                                      Number(
+                                        latest.withdrawal_value,
+                                      ),
+                                  ),
+                                  "MXN",
+                                )}
+                              </strong>
+                            </div>
+
+                            <div>
+                              <span>Cuentas</span>
+                              <strong>
+                                {latest.account_count}
+                              </strong>
+                            </div>
+                          </>
+                        );
+                      })()}
                   </div>
                 </article>
               </section>
+
+              <section className="panel monthly-performance">
+                <div className="panel-header">
+                  <div>
+                    <p className="eyebrow">HISTORY</p>
+                    <h2>Histórico mensual</h2>
+                  </div>
+
+                  <span className="panel-note">
+                    {monthlySummary.length} meses
+                  </span>
+                </div>
+
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Mes</th>
+                        <th>Patrimonio</th>
+                        <th>Intereses</th>
+                        <th>Movimientos</th>
+                        <th>Cuentas</th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {monthlySummary.map((month) => {
+                        const [year, monthNumber] =
+                          month.month.slice(0, 7).split("-");
+
+                        const date = new Date(
+                          Number(year),
+                          Number(monthNumber) - 1,
+                          1,
+                        );
+
+                        const movement =
+                          Number(
+                            month.contribution_value,
+                          ) -
+                          Number(
+                            month.withdrawal_value,
+                          );
+
+                        return (
+                          <tr key={month.month}>
+                            <td>
+                              {date.toLocaleDateString(
+                                "es-MX",
+                                {
+                                  month: "long",
+                                  year: "numeric",
+                                },
+                              )}
+                            </td>
+
+                            <td>
+                              {money(
+                                month.total_value,
+                                "MXN",
+                              )}
+                            </td>
+
+                            <td className="positive">
+                              {money(
+                                month.interest_value,
+                                "MXN",
+                              )}
+                            </td>
+
+                            <td>
+                              {money(
+                                String(movement),
+                                "MXN",
+                              )}
+                            </td>
+
+                            <td>
+                              {month.account_count}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
             </>
           )}
+
+          {/* ==================================================
+              RENTA VARIABLE
+          ================================================== */}
 
           {activeTab === "variable" && (
             <>
               <section className="hero-grid">
                 <article className="hero-card">
                   <span className="metric-label">
-                    Patrimonio de renta variable
+                    Patrimonio renta variable
                   </span>
                   <strong className="hero-value">
-                    {money(String(variableTotal), "MXN")}
+                    {money(
+                      String(variableTotal),
+                      "MXN",
+                    )}
                   </strong>
                   <span className="metric-foot">
                     GBM / Fintual
@@ -750,47 +1145,117 @@ function App() {
 
                 <article className="metric-card">
                   <span className="metric-label">
-                    Ganancia
+                    Ganancia real
                   </span>
-                  <strong className="positive">
+                  <strong
+                    className={
+                      variableActualGain >= 0
+                        ? "positive"
+                        : "negative"
+                    }
+                  >
                     {money(
                       summary.gain,
                       summary.currency,
                     )}
                   </strong>
                   <span className="metric-foot">
-                    Según el resumen de inversión
+                    Según GBM / Fintual
                   </span>
                 </article>
 
                 <article className="metric-card">
                   <span className="metric-label">
-                    Rendimiento
-                  </span>
-                  <strong className="positive">
-                    {summary.return_percentage === null
-                      ? "—"
-                      : `${summary.return_percentage}%`}
-                  </strong>
-                  <span className="metric-foot">
-                    Fuente: {summary.source ?? "—"}
-                  </span>
-                </article>
-
-                <article className="metric-card">
-                  <span className="metric-label">
-                    Capital aportado
+                    Benchmark 10% anual
                   </span>
                   <strong>
                     {money(
-                      summary.contributed_capital,
+                      String(variableBenchmark),
                       summary.currency,
                     )}
                   </strong>
                   <span className="metric-foot">
-                    Renta variable
+                    Ganancia hipotética
                   </span>
                 </article>
+
+                <article className="metric-card">
+                  <span className="metric-label">
+                    Real vs benchmark
+                  </span>
+                  <strong
+                    className={
+                      variableVsBenchmark >= 0
+                        ? "positive"
+                        : "negative"
+                    }
+                  >
+                    {money(
+                      String(variableVsBenchmark),
+                      summary.currency,
+                    )}
+                  </strong>
+                  <span className="metric-foot">
+                    Diferencia acumulada
+                  </span>
+                </article>
+              </section>
+
+              <section className="comparison-card">
+                <div>
+                  <p className="eyebrow">10% ANUAL</p>
+                  <h2>¿Conviene más la renta variable?</h2>
+                  <p>
+                    El benchmark trata cada compra registrada como
+                    si hubiera permanecido invertida al 10% anual
+                    desde su fecha hasta el último snapshot.
+                    Es una referencia comparativa, no un cálculo
+                    de rendimiento financiero oficial.
+                  </p>
+                </div>
+
+                <div className="comparison-grid">
+                  <div>
+                    <span>Ganancia real</span>
+                    <strong
+                      className={
+                        variableActualGain >= 0
+                          ? "positive"
+                          : "negative"
+                      }
+                    >
+                      {money(
+                        String(variableActualGain),
+                        summary.currency,
+                      )}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span>Ganancia benchmark</span>
+                    <strong>
+                      {money(
+                        String(variableBenchmark),
+                        summary.currency,
+                      )}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span>Resultado</span>
+                    <strong
+                      className={
+                        variableVsBenchmark >= 0
+                          ? "positive"
+                          : "negative"
+                      }
+                    >
+                      {variableVsBenchmark >= 0
+                        ? "Supera benchmark"
+                        : "Debajo del benchmark"}
+                    </strong>
+                  </div>
+                </div>
               </section>
 
               <section className="main-grid">
@@ -871,7 +1336,7 @@ function App() {
                   <div className="panel-header">
                     <div>
                       <p className="eyebrow">PERFORMANCE</p>
-                      <h2>Rendimiento</h2>
+                      <h2>Resultado</h2>
                     </div>
                   </div>
 
@@ -914,250 +1379,163 @@ function App() {
                           : `${summary.return_percentage}%`}
                       </strong>
                     </div>
+
+                    <div>
+                      <span>Benchmark 10%</span>
+                      <strong>
+                        {money(
+                          String(variableBenchmark),
+                          summary.currency,
+                        )}
+                      </strong>
+                    </div>
                   </div>
                 </article>
               </section>
-            </>
-          )}
 
-          {(activeTab === "all" ||
-            activeTab === "variable") && (
-            <section className="panel transactions-panel">
-              <div className="panel-header">
-                <div>
-                  <p className="eyebrow">ACTIVITY</p>
-                  <h2>Transacciones</h2>
+              <section className="panel transactions-panel">
+                <div className="panel-header">
+                  <div>
+                    <p className="eyebrow">ACTIVITY</p>
+                    <h2>Operaciones</h2>
+                  </div>
+
+                  <span className="panel-note">
+                    {filteredTransactions.length} registros
+                  </span>
                 </div>
 
-                <span className="panel-note">
-                  {filteredTransactions.length} registros
-                </span>
-              </div>
+                <div className="filters">
+                  <label>
+                    <span>Cuenta</span>
+                    <select
+                      value={accountFilter}
+                      onChange={(event) =>
+                        setAccountFilter(event.target.value)
+                      }
+                    >
+                      <option value="all">Todas</option>
 
-              <div className="filters">
-                <label>
-                  <span>Cuenta</span>
-                  <select
-                    value={accountFilter}
-                    onChange={(event) =>
-                      setAccountFilter(event.target.value)
-                    }
-                  >
-                    <option value="all">
-                      Todas
-                    </option>
+                      {accounts.map((account) => (
+                        <option
+                          key={account.id}
+                          value={String(account.id)}
+                        >
+                          {account.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
 
-                    {accounts.map((account) => (
-                      <option
-                        key={account.id}
-                        value={String(account.id)}
-                      >
-                        {account.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                  <label>
+                    <span>Tipo</span>
+                    <select
+                      value={typeFilter}
+                      onChange={(event) =>
+                        setTypeFilter(event.target.value)
+                      }
+                    >
+                      <option value="all">Todos</option>
 
-                <label>
-                  <span>Tipo</span>
-                  <select
-                    value={typeFilter}
-                    onChange={(event) =>
-                      setTypeFilter(event.target.value)
-                    }
-                  >
-                    <option value="all">
-                      Todos
-                    </option>
-
-                    {Array.from(
-                      new Set(
-                        transactions.map(
-                          (transaction) =>
-                            transaction.transaction_type,
+                      {Array.from(
+                        new Set(
+                          transactions.map(
+                            (transaction) =>
+                              transaction.transaction_type,
+                          ),
                         ),
-                      ),
-                    ).map((type) => (
-                      <option key={type} value={type}>
-                        {type}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-
-              <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Fecha</th>
-                      <th>Cuenta</th>
-                      <th>Tipo</th>
-                      <th>Cantidad</th>
-                      <th>Precio</th>
-                      <th>Total</th>
-                      <th>Estado</th>
-                    </tr>
-                  </thead>
-
-                  <tbody>
-                    {filteredTransactions.map(
-                      (transaction) => {
-                        const account = accountMap.get(
-                          transaction.account_id,
-                        );
-
-                        return (
-                          <tr key={transaction.id}>
-                            <td>
-                              {transaction.trade_date
-                                ? new Date(
-                                    transaction.trade_date,
-                                  ).toLocaleDateString(
-                                    "es-MX",
-                                  )
-                                : "—"}
-                            </td>
-
-                            <td>
-                              {account?.name ??
-                                `Cuenta ${transaction.account_id}`}
-                            </td>
-
-                            <td>
-                              {transaction.transaction_type}
-                            </td>
-
-                            <td>
-                              {number(transaction.quantity)}
-                            </td>
-
-                            <td>
-                              {money(
-                                transaction.unit_price,
-                                transaction.currency,
-                              )}
-                            </td>
-
-                            <td>
-                              {money(
-                                transaction.total_amount,
-                                transaction.currency,
-                              )}
-                            </td>
-
-                            <td>
-                              {transaction.status}
-                            </td>
-                          </tr>
-                        );
-                      },
-                    )}
-
-                    {filteredTransactions.length === 0 && (
-                      <tr>
-                        <td colSpan={7}>
-                          No hay transacciones para los filtros
-                          seleccionados.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          )}
-
-          {(activeTab === "all" ||
-            activeTab === "fixed") && (
-            <section className="panel monthly-performance">
-              <div className="panel-header">
-                <div>
-                  <p className="eyebrow">HISTORY</p>
-                  <h2>Histórico de renta fija</h2>
+                      ).map((type) => (
+                        <option key={type} value={type}>
+                          {type}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                 </div>
 
-                <span className="panel-note">
-                  {monthlySummary.length} meses
-                </span>
-              </div>
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Fecha</th>
+                        <th>Cuenta</th>
+                        <th>Tipo</th>
+                        <th>Cantidad</th>
+                        <th>Precio</th>
+                        <th>Total</th>
+                        <th>Estado</th>
+                      </tr>
+                    </thead>
 
-              <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Mes</th>
-                      <th>Patrimonio</th>
-                      <th>Intereses</th>
-                      <th>Movimientos</th>
-                      <th>Cuentas</th>
-                    </tr>
-                  </thead>
+                    <tbody>
+                      {filteredTransactions.map(
+                        (transaction) => {
+                          const account = accountMap.get(
+                            transaction.account_id,
+                          );
 
-                  <tbody>
-                    {monthlySummary.map((month) => {
-                      const [year, monthNumber] =
-                        month.month
-                          .slice(0, 7)
-                          .split("-");
+                          return (
+                            <tr key={transaction.id}>
+                              <td>
+                                {transaction.trade_date
+                                  ? new Date(
+                                      transaction.trade_date,
+                                    ).toLocaleDateString(
+                                      "es-MX",
+                                    )
+                                  : "—"}
+                              </td>
 
-                      const monthDate = new Date(
-                        Number(year),
-                        Number(monthNumber) - 1,
-                        1,
-                      );
+                              <td>
+                                {account?.name ??
+                                  `Cuenta ${transaction.account_id}`}
+                              </td>
 
-                      const movement =
-                        Number(
-                          month.contribution_value,
-                        ) -
-                        Number(
-                          month.withdrawal_value,
-                        );
+                              <td>
+                                {transaction.transaction_type}
+                              </td>
 
-                      return (
-                        <tr key={month.month}>
-                          <td>
-                            {monthDate.toLocaleDateString(
-                              "es-MX",
-                              {
-                                month: "long",
-                                year: "numeric",
-                              },
-                            )}
-                          </td>
+                              <td>
+                                {number(
+                                  transaction.quantity,
+                                )}
+                              </td>
 
-                          <td>
-                            {money(
-                              month.total_value,
-                              "MXN",
-                            )}
-                          </td>
+                              <td>
+                                {money(
+                                  transaction.unit_price,
+                                  transaction.currency,
+                                )}
+                              </td>
 
-                          <td className="positive">
-                            {money(
-                              month.interest_value,
-                              "MXN",
-                            )}
-                          </td>
+                              <td>
+                                {money(
+                                  transaction.total_amount,
+                                  transaction.currency,
+                                )}
+                              </td>
 
-                          <td>
-                            {money(
-                              String(movement),
-                              "MXN",
-                            )}
-                          </td>
+                              <td>
+                                {transaction.status}
+                              </td>
+                            </tr>
+                          );
+                        },
+                      )}
 
-                          <td>
-                            {month.account_count}
+                      {filteredTransactions.length === 0 && (
+                        <tr>
+                          <td colSpan={7}>
+                            No hay operaciones para los filtros
+                            seleccionados.
                           </td>
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </section>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </>
           )}
         </>
       )}

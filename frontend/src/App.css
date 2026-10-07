@@ -500,3 +500,190 @@ td strong {
   background: var(--accent);
   color: white;
 }
+
+/* ============================================================
+   Dashboard analytics
+   ============================================================ */
+
+.dashboard-insight,
+.comparison-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 2rem;
+  margin-bottom: 1.5rem;
+  padding: 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--panel);
+}
+
+.dashboard-insight h2,
+.comparison-card h2 {
+  margin: 0.2rem 0 0.5rem;
+}
+
+.dashboard-insight p:not(.eyebrow),
+.comparison-card p:not(.eyebrow) {
+  max-width: 720px;
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.insight-numbers,
+.comparison-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(130px, 1fr));
+  gap: 1rem;
+  min-width: 360px;
+}
+
+.insight-numbers div,
+.comparison-grid div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.9rem;
+  border-radius: 12px;
+  background: var(--background);
+}
+
+.insight-numbers span,
+.comparison-grid span {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.insight-numbers strong,
+.comparison-grid strong {
+  font-size: 1.15rem;
+}
+
+.chart-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.chart-card {
+  min-width: 0;
+  min-height: 310px;
+  padding: 1.4rem;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--panel);
+}
+
+.chart-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.chart-heading h2 {
+  margin: 0.2rem 0 0;
+}
+
+.chart-heading > span {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.mini-chart,
+.interest-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 205px;
+  margin-top: 1.5rem;
+  padding: 0.75rem 0.2rem 0;
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.chart-column {
+  flex: 1;
+  min-width: 2px;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+}
+
+.chart-column span {
+  display: block;
+  width: 100%;
+  min-height: 2px;
+  border-radius: 4px 4px 0 0;
+  background: var(--accent);
+  opacity: 0.8;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.chart-column:hover span {
+  opacity: 1;
+  transform: translateY(-3px);
+}
+
+.interest-chart .chart-column span {
+  opacity: 0.62;
+}
+
+.comparison-card {
+  align-items: center;
+}
+
+.comparison-card > div:first-child {
+  flex: 1;
+}
+
+.comparison-grid {
+  flex-shrink: 0;
+}
+
+.positive {
+  color: var(--success, #22c55e);
+}
+
+.negative {
+  color: var(--danger, #ef4444);
+}
+
+.monthly-performance {
+  margin-bottom: 1.5rem;
+}
+
+@media (max-width: 900px) {
+  .dashboard-insight,
+  .comparison-card {
+    flex-direction: column;
+  }
+
+  .insight-numbers,
+  .comparison-grid {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .chart-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .insight-numbers,
+  .comparison-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .chart-card {
+    min-height: 260px;
+  }
+
+  .mini-chart,
+  .interest-chart {
+    height: 170px;
+  }
+}
+

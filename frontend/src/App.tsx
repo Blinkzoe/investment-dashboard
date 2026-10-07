@@ -603,22 +603,98 @@ const fixedIncomeVsBenchmark =
                   </div>
                 </article>
 
-                <article className="panel">
+                <article className="panel performance-panel">
                   <div className="panel-header">
                     <div>
                       <p className="eyebrow">VARIABLE</p>
                       <h2>Rendimiento actual</h2>
                     </div>
+                    <span className="panel-note">Benchmark 10% anual</span>
                   </div>
 
-                  <div className="summary-list">
+                  <div className="performance-hero">
                     <div>
-                      <span>Valor</span>
-                      <strong>
+                      <span className="metric-label">Rendimiento</span>
+                      <strong className="performance-percent positive">
+                        {summary.return_percentage !== null
+                          ? `${Number(summary.return_percentage).toFixed(2)}%`
+                          : "—"}
+                      </strong>
+                    </div>
+
+                    <div className="performance-gain">
+                      <span>Ganancia</span>
+                      <strong className="positive">
+                        {money(summary.gain, summary.currency)}
+                      </strong>
+                    </div>
+                  </div>
+
+                  <div className="benchmark-visual">
+                    <div className="benchmark-scale">
+                      <span>0%</span>
+                      <span>5%</span>
+                      <span>10%</span>
+                    </div>
+
+                    <div className="benchmark-track">
+                      <div
+                        className="benchmark-fill"
+                        style={{
+                          width: `${Math.min(
+                            Math.max(Number(summary.return_percentage ?? 0), 0),
+                            10,
+                          ) * 10}%`,
+                        }}
+                      />
+
+                      <div
+                        className="benchmark-marker"
+                        style={{ left: "100%" }}
+                        title="Benchmark hipotético del 10% anual"
+                      >
+                        <span />
+                      </div>
+                    </div>
+
+                    <div className="benchmark-labels">
+                      <span>
+                        Real:{" "}
+                        <strong>
+                          {summary.return_percentage !== null
+                            ? `${Number(summary.return_percentage).toFixed(2)}%`
+                            : "—"}
+                        </strong>
+                      </span>
+
+                      <span>
+                        Benchmark: <strong>10.00%</strong>
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="performance-comparison">
+                    <div>
+                      <span>Vs. benchmark</span>
+                      <strong
+                        className={
+                          variableVsBenchmark >= 0
+                            ? "positive"
+                            : "negative"
+                        }
+                      >
+                        {variableVsBenchmark >= 0 ? "+" : ""}
                         {money(
-                          summary.total_value,
+                          variableVsBenchmark.toFixed(2),
                           summary.currency,
                         )}
+                      </strong>
+                    </div>
+
+                    <div>
+                      <span>Valor actual</span>
+                      <strong>
+                        {money(summary.total_value, summary.currency)}
                       </strong>
                     </div>
 
@@ -631,26 +707,14 @@ const fixedIncomeVsBenchmark =
                         )}
                       </strong>
                     </div>
-
-                    <div>
-                      <span>Ganancia</span>
-                      <strong className="positive">
-                        {money(
-                          summary.gain,
-                          summary.currency,
-                        )}
-                      </strong>
-                    </div>
-
-                    <div>
-                      <span>Rendimiento</span>
-                      <strong className="positive">
-                        {summary.return_percentage === null
-                          ? "—"
-                          : `${summary.return_percentage}%`}
-                      </strong>
-                    </div>
                   </div>
+
+                  <p className="benchmark-disclaimer">
+                    El 10% es un benchmark hipotético para comparar el
+                    rendimiento de las compras registradas. No representa un
+                    rendimiento garantizado ni considera todos los efectos de
+                    ventas, dividendos o tipo de cambio.
+                  </p>
                 </article>
               </section>
             </>

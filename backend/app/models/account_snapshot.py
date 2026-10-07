@@ -53,6 +53,24 @@ class AccountSnapshot(Base):
         nullable=True,
     )
 
+    interest_value: Mapped[Decimal] = mapped_column(
+        Numeric(24, 8),
+        nullable=False,
+        default=Decimal("0"),
+    )
+
+    contribution_value: Mapped[Decimal] = mapped_column(
+        Numeric(24, 8),
+        nullable=False,
+        default=Decimal("0"),
+    )
+
+    withdrawal_value: Mapped[Decimal] = mapped_column(
+        Numeric(24, 8),
+        nullable=False,
+        default=Decimal("0"),
+    )
+
     currency: Mapped[str] = mapped_column(
         String(3),
         nullable=False,

@@ -12,6 +12,8 @@ class Settings(BaseSettings):
 
     secret_key: str
     jwt_secret_key: str
+    auth_username: str = "admin"
+    auth_password_hash: str
     import_api_token: str | None = None
 
     cors_origins: str = "http://localhost:3000"

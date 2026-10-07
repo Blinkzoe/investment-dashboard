@@ -8,7 +8,9 @@ from app.schemas.account_snapshot import (
     AccountSnapshotCreate,
     AccountSnapshotRead,
 )
+from app.schemas.account_snapshot_summary import AccountSnapshotMonthlySummaryRead
 from app.services.account_snapshot import AccountSnapshotService
+from app.services.account_snapshot_summary import AccountSnapshotSummaryService
 
 
 router = APIRouter(
@@ -33,6 +35,18 @@ def list_account_snapshots(
         return service.list_by_account(account_id)
 
     return service.list_latest()
+
+
+@router.get(
+    "/accounts/monthly-summary",
+    response_model=list[AccountSnapshotMonthlySummaryRead],
+)
+def get_account_snapshots_monthly_summary(
+    db: DbSession,
+    source: str | None = Query(default=None),
+) -> list[AccountSnapshotMonthlySummaryRead]:
+    service = AccountSnapshotSummaryService(db)
+    return service.get_monthly_summary(source=source)
 
 
 @router.post(

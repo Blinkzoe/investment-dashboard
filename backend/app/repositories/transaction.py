@@ -29,7 +29,16 @@ class TransactionRepository:
             Transaction.trade_date.desc(),
             Transaction.id.desc(),
         )
+        return list(self.db.scalars(statement).all())
 
+    def list_all_chronological(self, *, source: str | None = None) -> list[Transaction]:
+        statement = select(Transaction)
+        if source is not None:
+            statement = statement.where(Transaction.source == source)
+        statement = statement.order_by(
+            Transaction.trade_date.asc(),
+            Transaction.id.asc(),
+        )
         return list(self.db.scalars(statement).all())
 
     def list_by_account(

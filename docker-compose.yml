@@ -71,6 +71,7 @@ services:
 
     networks:
       - investment
+      - cloudflare
 
     ports:
       - "5173:80"
@@ -89,3 +90,5 @@ networks:
   investment:
     name: investment-network
     driver: bridge
+  cloudflare:
+    external: true
